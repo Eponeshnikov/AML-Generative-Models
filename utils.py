@@ -1,6 +1,23 @@
-import torch.nn as nn
 import torch
 import torch.nn.functional as F
+from torch.utils.data import Dataset
+
+
+class UNSWDataset(Dataset):
+
+    def __init__(self, X, y, device=torch.device('cpu')):
+        if not torch.is_tensor(X) and not torch.is_tensor(y):
+            self.X = torch.torch.from_numpy(X).to(torch.float32).to(device)
+            self.y = torch.from_numpy(y).to(torch.int32).to(device)
+        else:
+            self.X = X.to(torch.float32).to(device)
+            self.y = y.to(torch.long).to(device)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, i):
+        return self.X[i], self.y[i]
 
 
 def make_reconstruction_loss(n_features, loss):

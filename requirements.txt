@@ -1,0 +1,9 @@
+numpy
+pandas
+sklearn
+matplotlib
+interpret
+tqdm
+torch
+torchvision
+torchaudio

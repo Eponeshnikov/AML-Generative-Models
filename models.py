@@ -28,16 +28,18 @@ class AE(nn.Module):
                                for i in range(len(self.neurons) // 2, len(self.neurons) - 1)]
 
         self.enc_relu = []
-        for en in self.encoder_layers:
+        for i, en in enumerate(self.encoder_layers):
             self.enc_relu.append(en)
-            self.enc_relu.append(nn.ReLU())
+            if en != len(self.encoder_layers)-1:
+                self.enc_relu.append(nn.ReLU())
         self.dec_relu = []
-        for de in self.decoder_layers:
+        for i, de in enumerate(self.decoder_layers):
             self.dec_relu.append(de)
-            self.dec_relu.append(nn.ReLU())
+            if de != len(self.decoder_layers) - 1:
+                self.enc_relu.append(nn.ReLU())
 
-        self.encoder = nn.Sequential(*self.enc_relu)
-        self.decoder = nn.Sequential(*self.dec_relu)
+        self.encoder = nn.Sequential(*self.enc_relu, nn.Sigmoid())
+        self.decoder = nn.Sequential(*self.dec_relu, nn.Sigmoid())
 
     def forward(self, x):
         x = self.encoder(x)
@@ -80,3 +82,88 @@ class VAE(nn.Module):
         mu, log_var = self.encode(x)
         hidden = self.reparametrize(mu, log_var)
         return self.decoder(hidden)
+
+
+class GeneratorModel(nn.Module):
+    def __init__(self, input_dim_, output_dim, classes, embedding_dim):
+        super(GeneratorModel, self).__init__()
+        input_dim = input_dim_ + embedding_dim
+        self.label_embedding = nn.Embedding(classes, embedding_dim)
+
+        self.hidden_layer1 = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.BatchNorm1d(128, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3)
+        )
+
+        self.hidden_layer2 = nn.Sequential(
+            nn.Linear(128, 256),
+            nn.BatchNorm1d(256, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3)
+        )
+
+        self.hidden_layer3 = nn.Sequential(
+            nn.Linear(256, 512),
+            nn.BatchNorm1d(512, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3)
+        )
+
+        self.hidden_layer4 = nn.Sequential(
+            nn.Linear(512, output_dim),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x, labels):
+        c = self.label_embedding(labels)
+        x = torch.cat([x, c], 1)
+        output = self.hidden_layer1(x)
+        output = self.hidden_layer2(output)
+        output = self.hidden_layer3(output)
+        output = self.hidden_layer4(output)
+        return output
+
+
+class DiscriminatorModel(nn.Module):
+    def __init__(self, input_dim_, classes, embedding_dim, output_dim=1):
+        super(DiscriminatorModel, self).__init__()
+        input_dim = input_dim_ + embedding_dim
+        self.label_embedding = nn.Embedding(classes, embedding_dim)
+
+        self.hidden_layer1 = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            #nn.BatchNorm1d(512, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            #nn.Dropout(0.3)
+        )
+
+        self.hidden_layer2 = nn.Sequential(
+            nn.Linear(256, 128),
+            #nn.BatchNorm1d(512, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            #nn.Dropout(0.3)
+        )
+
+        self.hidden_layer3 = nn.Sequential(
+            nn.Linear(128, 64),
+            #nn.BatchNorm1d(512, momentum=0.1),
+            nn.LeakyReLU(0.2),
+            #nn.Dropout(0.3)
+        )
+
+        self.hidden_layer4 = nn.Sequential(
+            nn.Linear(64, output_dim),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x, labels):
+        c = self.label_embedding(labels)
+        x = torch.cat([x, c], 1)
+        output = self.hidden_layer1(x)
+        output = self.hidden_layer2(output)
+        output = self.hidden_layer3(output)
+        output = self.hidden_layer4(output)
+
+        return output
